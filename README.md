@@ -75,3 +75,5 @@ Push repository GitHub, nộp link public hoặc cấp quyền giảng viên; đ
 | 4:00–4:30 | GPA/chi tiết điểm, GitHub/README, kết luận. |
 
 Giữ terminal/db.json đọc được, thao tác airplane mode trực tiếp; tải link Drive/YouTube không công khai vào bài nộp. Chuẩn bị dữ liệu trước nhưng thể hiện đủ từng thao tác.
+
+Link render:https://b23dcc132-th4-appdnt.onrender.com
