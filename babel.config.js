@@ -1,3 +1,3 @@
-module.exports = {
-  presets: ['module:@react-native/babel-preset'],
-};
+module.exports = api => ({
+  presets: [api.env('test') ? 'module:@react-native/babel-preset' : 'babel-preset-expo'],
+});

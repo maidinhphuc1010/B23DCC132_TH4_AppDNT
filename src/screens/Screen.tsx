@@ -1,1 +1,0 @@
-import {ScrollView, StyleSheet} from 'react-native';

@@ -1,97 +1,77 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# StudyManager — Thực hành 4: API và Offline Mode
 
-# Getting Started
+Ứng dụng React Native/Expo quản lý môn học, lịch, bài tập, hồ sơ và kết quả học tập qua REST API json-server; hỗ trợ cache và thao tác offline.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Công nghệ
+React Native 0.81, Expo SDK 54, JavaScript/JSX, React Navigation, NetInfo, AsyncStorage, Fetch API, json-server, Jest, React Test Renderer, ESLint.
 
-## Step 1: Start Metro
+## Cấu trúc thư mục
+```text
+StudyManager/ App.js db.json README.md
+src/{api,components,context,data,hooks,navigation,screens,storage,theme,types,utils}/
+```
+`api/`: request và endpoint services; `components/`: common/assignment/course/grade/profile/schedule; `context/`: AppDataContext, OfflineAppDataProvider, SyncContext; `hooks/`: network/cache/outbox/mutation; `screens/`: home/courses/schedule/assignments/profile; `storage/`: AsyncStorage cache/outbox. Entry App.js dùng navigation/provider trong src; mã HomeScreen.js và TypeScript cũ được giữ tương thích bài trước.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
+## Cài đặt, chạy Expo và json-server
+Yêu cầu Node phù hợp Expo SDK 54 (>=20.19.4, khuyến nghị Node 22 LTS), npm, Android Emulator hoặc Expo Go tương thích SDK.
+```powershell
+npm install
+# terminal 1
+npm run api
+# terminal 2
 npm start
-
-# OR using Yarn
-yarn start
 ```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+Quét QR hoặc nhấn `a` mở emulator. Android Emulator mặc định dùng `http://10.0.2.2:3000`. Điện thoại thật và máy tính phải cùng Wi-Fi; lấy IPv4 bằng `ipconfig`, cho phép Node/port 3000 qua firewall. Trước Expo đặt IP LAN thật:
+```powershell
+$env:EXPO_PUBLIC_API_URL = 'http://192.168.1.10:3000'
+npm start -- --clear
 ```
+Không dùng localhost trên điện thoại. Server dừng sẽ hiện lỗi/nút Thử lại, không dùng dữ liệu giả.
 
-### iOS
+## Sử dụng
+Năm tab: Tổng quan, Môn học, Lịch học, Bài tập, Cá nhân. Tìm/lọc môn, chọn ngày, thêm bài tập/đổi trạng thái/xem chi tiết, sửa hồ sơ, xem GPA và điểm. Kéo danh sách để refresh. GPA trọng số tín chỉ; F bằng 0 điểm trong mẫu số, không cộng tín chỉ tích lũy.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+## Kiến trúc, cache và offline
+```text
+Màn hình → Hook → Service → request → API
+                 ↘ Context điều phối ↔ Cache / Outbox (AsyncStorage)
+GET: useCachedQuery đọc cache → render ngay → Service/API revalidate
+Ghi offline: Screen → Context → Outbox + cache/override → auto sync → API
 ```
+AppDataContext forward tới OfflineAppDataProvider. Hook/context điều phối cache/outbox; service chỉ gọi request, không tự đọc AsyncStorage. useCachedQuery cache-first, cập nhật savedAt. NetInfo điều khiển banner **Bạn đang offline**. Cache còn dùng được kèm thời gian cập nhật cuối; cache trống thì lỗi có Thử lại, không crash. Thao tác bài tập và hồ sơ offline được lưu bền vững trong outbox, UI cập nhật ngay, bài tập hiện **Chưa đồng bộ**. Reconnect xử lý FIFO, cập nhật API/cache, xóa action thành công và báo số thay đổi; lỗi mạng giữ action để thử lại.
 
-Then, and every time you update your native dependencies, run:
+## Xung đột B5
+PATCH offline lưu `baseUpdatedAt`. Khi sync, GET phiên bản server trước PATCH; nếu `server.updatedAt` mới hơn base, không gửi PATCH, bỏ action xung đột khỏi outbox, cache bản server và báo người dùng. Nếu server không mới hơn thì gửi PATCH. Server thắng; muốn giữ nội dung local sau conflict cần sửa/lưu lại. updatedAt cần là ISO timestamp hợp lệ.
 
-```sh
-bundle exec pod install
+## Đối chiếu thang điểm
+- **A — API (4):** BASE_URL/TIMEOUT, service/request, GET/POST/PATCH, loading/error/retry, validation, optimistic status, refresh, chi tiết và quan hệ.
+- **B — Offline (4):** B1 NetInfo/banner; B2 cache-first/savedAt; B3 outbox/UI lạc quan; B4 reconnect sync; B5 server-wins updatedAt/thông báo.
+- **C — Kết quả học tập (1):** học kỳ, chi tiết điểm, GPA quy đổi/trọng số tín chỉ.
+- **D — Mã nguồn (1):** cấu trúc mục 5, phân tầng, component trình bày, theme, accessibility, EmptyState.
+
+## Kiểm tra tự động
+```powershell
+npm test -- --runInBand
+npm run lint
+npx expo export --platform android
+git diff --check
 ```
+Mock tests không thay kiểm thử thiết bị/REST thật.
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## GitHub và video bài nộp
+Push repository GitHub, nộp link public hoặc cấp quyền giảng viên; đảm bảo có `db.json`, `README.md`, source và không có secret. Quay MP4 3–5 phút; không ghi PASS kịch bản chưa chạy thật.
 
-```sh
-# Using npm
-npm run ios
+### Video demo đề xuất (4:30)
+| Thời gian | Cảnh quay |
+|---|---|
+| 0:00–0:20 | Giới thiệu, tab, Expo và json-server. |
+| 0:20–0:45 | **1:** dừng server, app chưa cache; lỗi, Thử lại, không crash. |
+| 0:45–1:10 | **2:** tải cache, airplane mode/restart; banner và thời gian. |
+| 1:10–1:50 | **3:** offline hoàn thành 2 bài, thêm bài; nhãn chưa đồng bộ. |
+| 1:50–2:20 | **4:** reconnect; thông báo, badge mất, db.json đổi. |
+| 2:20–3:05 | **5:** offline sửa tên; db.json sửa tên và updatedAt mới hơn; reconnect, server thắng. |
+| 3:05–3:30 | **6:** tìm môn không tồn tại/lọc rỗng; EmptyState. |
+| 3:30–4:00 | **7:** pull-to-refresh và indicator. |
+| 4:00–4:30 | GPA/chi tiết điểm, GitHub/README, kết luận. |
 
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Giữ terminal/db.json đọc được, thao tác airplane mode trực tiếp; tải link Drive/YouTube không công khai vào bài nộp. Chuẩn bị dữ liệu trước nhưng thể hiện đủ từng thao tác.
